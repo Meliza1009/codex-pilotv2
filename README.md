@@ -1,6 +1,8 @@
 # Codex Pilot
 
-Paste a public GitHub issue and receive a focused, reviewable patch proposal. Codex Pilot visibly loads the issue, comments, repository tree, and a small set of relevant source files. It streams observable investigation milestones, asks the locally authenticated Codex CLI for structured edits, then runs a dedicated patch-review pass before building a downloadable unified diff.
+Codex Pilot turns a public GitHub issue into a focused, reviewable patch proposal. It reads the issue discussion and a bounded set of repository files, asks an AI engine for structured analysis and edits, validates the proposed changes, and presents a unified diff for review.
+
+The project produces a reviewed patch proposal. It does not execute target-repository code or claim that the patch passes the target repository's tests.
 
 ## Run locally
 
@@ -11,44 +13,80 @@ codex login
 npm run dev
 ```
 
-Open `http://localhost:3000`. Add `GITHUB_TOKEN` to `.env.local` if GitHub’s unauthenticated API limit becomes restrictive.
+Open <http://localhost:3000> and paste a public GitHub issue URL.
+
+Set `GITHUB_TOKEN` in `.env.local` if GitHub's unauthenticated API rate limit is too restrictive. Keep `.env` and `.env.local` private; both are ignored by Git.
+
+## Configuration
+
+The most useful local settings are:
+
+```dotenv
+# Live investigations
+CODEX_PILOT_LIVE_RUNS=true
+NEXT_PUBLIC_CODEX_PILOT_LIVE_RUNS=true
+
+# Optional GitHub read token
+GITHUB_TOKEN=
+
+# Optional PR publishing
+CODEX_PILOT_ALLOW_PR=false
+CODEX_PILOT_PR_MODE=fork
+GITHUB_PR_TOKEN=
+```
+
+PR publishing is disabled by default. To enable it, set `CODEX_PILOT_ALLOW_PR=true` and provide a token with the required GitHub access. Branch mode pushes to the target repository and requires write access there. Fork mode pushes a feature branch to your fork and opens a PR against the upstream repository; it is the appropriate mode for repositories you do not own. If automatic fork creation is rejected, create the fork on GitHub once and retry.
+
+For public upstream repositories, a classic GitHub token with the `public_repo` scope is often the simplest option for fork publishing. Fine-grained tokens must be authorized for the resources and repository permissions used by the operation.
 
 ## Hosting modes
 
-- **Local live demo:** leave `CODEX_PILOT_LIVE_RUNS` unset (or set it to `true`), run `codex login`, then start the app with `npm run dev`.
-- **Hosted sample preview:** set both `CODEX_PILOT_LIVE_RUNS=false` and `NEXT_PUBLIC_CODEX_PILOT_LIVE_RUNS=false` at build time. The page clearly labels its sample run and refuses submissions instead of attempting to access a Codex CLI session that the host does not have.
+- **Local live demo:** leave `CODEX_PILOT_LIVE_RUNS` enabled, authenticate the local Codex CLI with `codex login`, and run `npm run dev`.
+- **Hosted sample preview:** set both `CODEX_PILOT_LIVE_RUNS=false` and `NEXT_PUBLIC_CODEX_PILOT_LIVE_RUNS=false` at build time. The preview shows sample data and refuses live investigations and PR publishing.
 
-## Boundaries
+## Investigation workflow
 
-- Public GitHub issues only; pull requests and private repositories are rejected for investigation.
-- Repositories are read through GitHub’s REST API, capped at 25 MB and 10,000 files.
-- The locally authenticated Codex CLI receives only the issue, comments, and selected file contents. It runs in an ephemeral, read-only sandbox with its shell tool disabled.
-- The agent may replace content only in a file it inspected. Codex Pilot validates the replacements and generates the diff itself.
-- Target repository code is never executed or tested by Codex Pilot.
-- Pull requests are opt-in: set `CODEX_PILOT_ALLOW_PR=true` and `GITHUB_PR_TOKEN` (Contents + Pull requests write) on the local demo, tick the approval checkbox, and Codex Pilot shallow-clones the repo, applies the reviewed diff on a `codex-pilot/issue-N-*` feature branch, pushes that branch only, and opens a PR. It never pushes to the base branch. Hosted previews always refuse PRs.
-- Fork mode (`CODEX_PILOT_PR_MODE=fork`, for repos you don't own) reuses a fork that already exists under your account — if API fork creation is refused, fork once in the browser and retry. A classic PAT with the `public_repo` scope also sidesteps fine-grained token fork limits.
+1. Read the issue, comments, repository metadata, and the current default-branch commit.
+2. Explore a bounded set of relevant files and search results.
+3. Build a structured requirements contract and implementation plan.
+4. Ask the selected AI engine for complete file replacements within the approved plan.
+5. Generate the unified diff in the application and run deterministic scope and consistency checks.
+6. Run a separate patch-review pass that checks requirement coverage, unrelated changes, likely syntax risk, API risk, and evidence support.
+7. Display the patch, explanations, review record, limitations, and downloadable diff.
 
-## QA status
+The local Codex CLI runs with an ephemeral read-only sandbox and its shell tool disabled. The OpenAI API engine uses strict structured output. The browser stores engine settings locally; API keys are sent for the current run and are not stored or logged by the server.
 
-Codex Pilot labels generated changes **PATCH PROPOSED — NOT EXECUTED**. It captures the analyzed commit SHA and preserves the canonical diff and review record; download the patch and run repository-defined QA in an approved developer environment, or approve a feature-branch PR and review it on GitHub before merging.
+## Verification boundary
 
-## Engine settings
+Codex Pilot captures the analyzed commit and validates that the patch is structurally applicable, but it does not clone and execute arbitrary target repositories. The UI therefore labels the result **PATCH PROPOSED - NOT EXECUTED**. Apply the downloaded patch in an approved development environment and run the repository's own build, lint, and test commands before merging.
 
-The header shows which engine powers investigations. Open **Settings** to choose:
+## Pull-request workflow
 
-- **Local Codex CLI** (default) — uses your subscription via `codex login` on this machine.
-- **OpenAI API** — calls the OpenAI Responses API directly with strict structured output. Handy when your Codex limit runs out; billed by OpenAI.
+After the review is approved and the consent checkbox is selected, the local PR flow:
 
-Your API key and model live only in the browser (`localStorage`) and travel with each run request — never stored on the server, never logged (redacted like all secrets). A server-side `OPENAI_API_KEY` fills in when the browser has none, and `CODEX_PILOT_PROVIDER=openai` forces the API engine for everyone.
+1. Clones the repository into a temporary workspace.
+2. Creates a `codex-pilot/issue-N-*` feature branch.
+3. Applies and checks the reviewed patch.
+4. Commits and pushes the feature branch only.
+5. Creates the PR through the GitHub API.
+6. Removes the temporary workspace.
 
-## Logs
+The base branch is never pushed. If branch pushing succeeds but PR creation fails, the feature branch remains available on GitHub and can be opened manually from the fork.
 
-Open `/logs` (or the **Logs** button in the header) to watch server activity and errors — run failures, PR flow failures, and client-side interruptions stream there live with level filters and text search. Secrets are redacted before storing; the buffer keeps the last 500 entries in memory per server instance.
+## Logs and saved runs
 
-If a run fails, the banner names the failed stage (e.g. "Failed at: Generating patch") with an error code and a **View logs** link. Codex step failures distinguish timeouts (`CODEX_TIMEOUT`, 180s per step), crashes (`CODEX_EXIT`, exit code + last output), and auth problems (`CODEX_UNAVAILABLE`). Retry always restarts from scratch. The agent activity panel collapses completed stages — expand one to see its steps.
+Open `/logs` or use the **Logs** button to inspect live server activity, failure codes, and PR events. Secrets are redacted, and the in-memory log buffer keeps the most recent 500 entries per server instance.
 
-Finished runs are auto-saved to the browser (`localStorage`) and restored when you navigate between the main page and `/logs` or reload — look for the "Restored …" chip in the header, with a **Clear** button to drop it. In-progress runs can't be resumed after leaving the page.
+Completed runs are saved in the browser's `localStorage` and restored after navigation or reload. An in-progress run cannot be resumed after leaving the page. Use **Clear** to remove saved runs from the browser.
 
-The deterministic regression suite covers explicit requirement-to-plan-to-patch coverage, stable revision pinning, planner repair, patch persistence, bounded revisions, and manual-QA-only verification behavior.
+## Tests
 
-If Codex cannot return a supported, confident edit, the app clearly refuses to offer an empty patch. GitHub rate limits, private or missing repositories, closed issues, unsupported files, and large repositories receive dedicated failure states.
+Run the deterministic regression suite with:
+
+```powershell
+npm test
+```
+
+The suite covers issue-to-plan-to-patch contracts, revision pinning, bounded revisions, patch persistence, PR-flow behavior, log redaction, provider handling, and manual-QA-only verification.
+
+If the investigator cannot establish enough evidence or produce a supported, scoped edit, it refuses to publish an empty or ungrounded patch. Rate limits, private repositories, missing repositories, closed issues, unsupported files, and oversized repositories receive dedicated failure states.
