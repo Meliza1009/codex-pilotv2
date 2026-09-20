@@ -1,20 +1,106 @@
 # Codex Pilot
 
-Codex Pilot turns a public GitHub issue into a focused, reviewable patch proposal. It reads the issue discussion and a bounded set of repository files, asks an AI engine for structured analysis and edits, validates the proposed changes, and presents a unified diff for review.
-
-The project produces a reviewed patch proposal. It does not execute target-repository code or claim that the patch passes the target repository's tests.
+> Autonomous GitHub Issue Solver & Patch Proposer
 
 [![Video Presentation](https://img.shields.io/badge/Video_Presentation-Google_Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/drive/folders/1dKBSR1pNRw1YZZmcVvqijf8pqgp2Ga-y?usp=sharing)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Meliza1009/codex-pilotv2)
+[![Next.js](https://img.shields.io/badge/Next.js-16_(Turbopack)-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 ![Codex Pilot - From Issue to Reviewable Patch and Pull Request](public/screenshots/01-overview-pr-fork.png)
 
-## 📺 Video Presentation
+---
 
-The complete video presentation and walkthrough demo are available on Google Drive:
+## Overview
 
-👉 **[Watch Codex Pilot Video Presentation](https://drive.google.com/drive/folders/1dKBSR1pNRw1YZZmcVvqijf8pqgp2Ga-y?usp=sharing)**
+**Codex Pilot** is an autonomous AI developer assistant that turns a public GitHub issue into a focused, verifiable, and reviewable patch proposal. 
 
-## Screenshots & Workflow Walkthrough
+Given an issue URL, Codex Pilot reads the discussion thread and repository metadata, autonomously explores candidate source files, builds a formal requirements contract and implementation plan, queries an AI engine for structured edits, validates the unified diff, runs an independent multi-check patch review, and pushes a feature branch to your GitHub fork with 1-click Pull Request creation.
+
+The project produces a reviewed patch proposal. It does not execute target-repository code or claim that the patch passes the target repository's tests.
+
+---
+
+## Problem Statement
+
+Contributing to open source or resolving complex bugs in unfamiliar codebases is slow, cognitively demanding, and prone to pitfalls:
+
+1. **High Cognitive Load & Context Traversal**: Developers must manually locate relevant files across thousands of lines of code and trace unfamiliar dependencies just to understand an issue.
+2. **AI Hallucinations & Scope Creep**: Standard LLMs often produce incomplete snippets, touch unrelated files, invent nonexistent APIs, or violate architectural boundaries.
+3. **Manual PR Overhead**: After identifying a fix, developers must fork, clone, create feature branches, format patches, commit, push, and open pull requests—a repetitive multi-step workflow.
+4. **Target Execution Security Risks**: Blindly executing untrusted target-repository code or scripts during investigation introduces severe security vulnerabilities.
+
+---
+
+## Solution
+
+Codex Pilot introduces a structured, safe, and transparent pipeline from issue URL to upstream pull request:
+
+- **Bounded Multi-Round Exploration**: Scans repository trees and performs focused symbol searches with evidence gates to ground every proposed edit in real source code.
+- **Formal Requirements & Planning Contract**: Deconstructs issues into explicit requirements (`mustImplement`, `preserve`, `test`) and drafts a step-by-step plan before touching code.
+- **Independent Patch Review**: An automated review pass verifies requirement coverage, flags API breakage risks, ensures no unrelated files were touched, and checks syntax sanity.
+- **Non-Executing Safety Boundary**: Analyzes and constructs patches without executing arbitrary target-repository code, providing downloadable `.diff` files for developer-side QA.
+- **Fork-Aware PR Publishing**: Creates ephemeral git workspaces, pushes feature branches exclusively to user forks (never touches base branches), and provides 1-click PR comparison links even when using scoped fine-grained tokens.
+
+---
+
+## Features
+
+- 🔍 **One-Click Issue Ingestion**: Paste any public GitHub issue URL to trigger autonomous repository indexing and discussion analysis.
+- 🧭 **Bounded Exploration & Evidence Gates**: Progressively explores candidate files with early-exit thresholds to ensure factual grounding.
+- 📋 **Structured Requirements Contract**: Mechanical mapping ensuring all criteria are categorized and covered by the patch.
+- 📐 **Rigorous Implementation Planning**: Pre-validates planned file operations (`modify`, `create`, `delete`) before code generation.
+- 🔀 **Live Unified Diff & Metrics**: Side-by-side and unified diff viewers with file modification tallies, additions, and deletions.
+- 📝 **Per-File Explanations**: Plain-language summaries and requirement coverage tags for every file changed in the proposal.
+- 🛡️ **Automated Patch Review**: Multi-point safety audit checking requirement coverage, scope isolation, API preservation, and syntax.
+- 💾 **Downloadable Diff Export**: Export clean `.diff` patch proposals with a single click for local testing via `git apply`.
+- 🚀 **Automated Fork PR Flow**: Clones into temporary workspaces, commits to a `codex-pilot/issue-N-*` branch, pushes to your GitHub fork, and generates 1-click PR creation links.
+- 🔒 **Security & Secret Redaction**: Real-time server logging at `/logs` with circular ring buffering and automatic masking of API keys and PAT tokens.
+
+---
+
+## Tech Stack
+
+* **Frontend**: Next.js 16 (App Router, Turbopack), React 19, TypeScript 5, Tailwind CSS 4, Lucide Icons
+* **Backend**: Next.js Route Handlers & Server Components, Node.js runtime, sandboxed `child_process` Git execution
+* **Database / Storage**: Client-side `localStorage` for run restoration; in-memory circular ring buffer (500 entries) for server logs
+* **APIs / Services**:
+  * GitHub REST API (Issues, Repositories, Pull Requests, Forks, Trees)
+  * OpenAI API (GPT-4o, GPT-4o-mini, GPT-5-mini with Strict JSON Schema outputs)
+  * Codex CLI / Local Engine (read-only ephemeral sandbox)
+* **Hosting / Deployment**: Local development environment (`next dev`), Vercel-ready hosted sample preview mode
+* **Other Tools**: Git CLI, Playwright (Browser E2E testing), ESLint 9, Node test runner with deterministic mock harness
+
+---
+
+## Codex / OpenAI Usage
+
+During the hackathon, OpenAI APIs, Codex, and AI-assisted development were utilized across all phases of the project:
+
+* **Ideation & Agent Architecture**: Designed a multi-stage cognitive pipeline (Ingest → Explore → Evidence Gate → Plan → Patch → Review → PR) inspired by SWE-bench autonomous coding workflows.
+* **Strict Structured Outputs**: Utilized OpenAI's `response_format: { type: "json_schema", strict: true }` across planner, coder, and reviewer modules, guaranteeing zero schema violations and reliable parsing.
+* **Codex CLI Sandbox Integration**: Implemented integration with the local Codex CLI operating within a read-only ephemeral sandbox with shell execution disabled for safety.
+* **Code Generation & Prompt Engineering**: Developed prompt templates for repository tree filtering, requirement extraction, unified diff production, and critical adversarial review passes.
+* **Debugging & Self-Correction**: Implemented JSON extraction fallback repair loops that recover from edge-case provider formatting deviations.
+* **GitHub Fine-Grained Token Fallback**: Engineered a graceful fallback when personal access tokens encounter HTTP 403 on upstream PR creation, constructing pre-filled GitHub comparison URLs for 1-click pull request generation.
+* **Deterministic Test Suite**: Created a 60-test mock harness validating prompt schemas, token redaction, git operations, and PR workflows without external network dependencies.
+
+---
+
+## Demo
+
+### Live Demo
+* **Local Web Application**: Run locally via `npm run dev` at [http://localhost:3000](http://localhost:3000) (or [http://localhost:3002](http://localhost:3002)).
+* **GitHub Repository**: [https://github.com/Meliza1009/codex-pilotv2](https://github.com/Meliza1009/codex-pilotv2)
+
+### Demo / Pitch Video
+The complete walkthrough demo and pitch video presentation are publicly available on Google Drive:
+
+👉 **[Watch Codex Pilot Demo & Pitch Video (Google Drive)](https://drive.google.com/drive/folders/1dKBSR1pNRw1YZZmcVvqijf8pqgp2Ga-y?usp=sharing)**
+
+---
+
+## Screenshots
 
 | View | Preview | Description |
 | :--- | :--- | :--- |
@@ -27,91 +113,71 @@ The complete video presentation and walkthrough demo are available on Google Dri
 | **Downloadable Diff Patch** | [![Download Patch](public/screenshots/08-download-patch.png)](public/screenshots/08-download-patch.png) | One-click patch export (`.diff`) for local offline verification, CI testing, and developer review. |
 | **Pull Request on GitHub** | [![PR on GitHub](public/screenshots/05-github-pr-opened.png)](public/screenshots/05-github-pr-opened.png) | Automated feature branch pushed to fork and opened against upstream repository with full context. |
 
+---
 
+## How to Run Locally
 
-## Run locally
+### Prerequisites
+- Node.js 20+ installed
+- Git installed
+- (Optional) GitHub Personal Access Token (for raised API rate limits & PR publishing)
+- (Optional) OpenAI API Key (or local Codex CLI)
+
+### Installation & Startup
 
 ```powershell
+# 1. Clone the repository
+git clone https://github.com/Meliza1009/codex-pilotv2.git
+cd codex-pilotv2
+
+# 2. Install dependencies
 npm install
+
+# 3. Configure environment
 Copy-Item .env.example .env.local
-codex login
+
+# 4. Start the development server
 npm run dev
 ```
 
-Open <http://localhost:3000> and paste a public GitHub issue URL.
+Open <http://localhost:3000> in your browser and paste any public GitHub issue URL.
 
-Set `GITHUB_TOKEN` in `.env.local` if GitHub's unauthenticated API rate limit is too restrictive. Keep `.env` and `.env.local` private; both are ignored by Git.
-
-## Configuration
-
-The most useful local settings are:
+### Configuration (`.env.local`)
 
 ```dotenv
-# Live investigations
+# Live investigations (set false for hosted sample-only preview)
 CODEX_PILOT_LIVE_RUNS=true
 NEXT_PUBLIC_CODEX_PILOT_LIVE_RUNS=true
 
-# Optional GitHub read token
+# Optional GitHub read token (raises unauthenticated rate limits)
 GITHUB_TOKEN=
 
 # Optional PR publishing
-CODEX_PILOT_ALLOW_PR=false
+CODEX_PILOT_ALLOW_PR=true
 CODEX_PILOT_PR_MODE=fork
 GITHUB_PR_TOKEN=
+
+# AI Provider defaults (overridable in browser Settings)
+CODEX_PILOT_PROVIDER=openai
+OPENAI_API_KEY=
 ```
 
-PR publishing is disabled by default. To enable it, set `CODEX_PILOT_ALLOW_PR=true` and provide a token with the required GitHub access. Branch mode pushes to the target repository and requires write access there. Fork mode pushes a feature branch to your fork and opens a PR against the upstream repository; it is the appropriate mode for repositories you do not own. If automatic fork creation is rejected, create the fork on GitHub once and retry.
+### Running Tests
 
-For public upstream repositories, a classic GitHub token with the `public_repo` scope is often the simplest option for fork publishing. Fine-grained tokens must be authorized for the resources and repository permissions used by the operation.
-
-## Hosting modes
-
-- **Local live demo:** leave `CODEX_PILOT_LIVE_RUNS` enabled, authenticate the local Codex CLI with `codex login`, and run `npm run dev`.
-- **Hosted sample preview:** set both `CODEX_PILOT_LIVE_RUNS=false` and `NEXT_PUBLIC_CODEX_PILOT_LIVE_RUNS=false` at build time. The preview shows sample data and refuses live investigations and PR publishing.
-
-## Investigation workflow
-
-1. Read the issue, comments, repository metadata, and the current default-branch commit.
-2. Explore a bounded set of relevant files and search results.
-3. Build a structured requirements contract and implementation plan.
-4. Ask the selected AI engine for complete file replacements within the approved plan.
-5. Generate the unified diff in the application and run deterministic scope and consistency checks.
-6. Run a separate patch-review pass that checks requirement coverage, unrelated changes, likely syntax risk, API risk, and evidence support.
-7. Display the patch, explanations, review record, limitations, and downloadable diff.
-
-The local Codex CLI runs with an ephemeral read-only sandbox and its shell tool disabled. The OpenAI API engine uses strict structured output. The browser stores engine settings locally; API keys are sent for the current run and are not stored or logged by the server.
-
-## Verification boundary
-
-Codex Pilot captures the analyzed commit and validates that the patch is structurally applicable, but it does not clone and execute arbitrary target repositories. The UI therefore labels the result **PATCH PROPOSED - NOT EXECUTED**. Apply the downloaded patch in an approved development environment and run the repository's own build, lint, and test commands before merging.
-
-## Pull-request workflow
-
-After the review is approved and the consent checkbox is selected, the local PR flow:
-
-1. Clones the repository into a temporary workspace.
-2. Creates a `codex-pilot/issue-N-*` feature branch.
-3. Applies and checks the reviewed patch.
-4. Commits and pushes the feature branch only.
-5. Creates the PR through the GitHub API.
-6. Removes the temporary workspace.
-
-The base branch is never pushed. In fork mode, the feature branch is pushed to your GitHub fork (`forkOwner/repo`). If upstream PR creation via API is restricted by token permissions (such as fine-grained PAT scopes on external repositories), Codex Pilot displays the pushed branch and provides a direct 1-click comparison link to open the pull request on GitHub with pre-filled title and description.
-
-## Logs and saved runs
-
-Open `/logs` or use the **Logs** button to inspect live server activity, failure codes, and PR events. Secrets are redacted, and the in-memory log buffer keeps the most recent 500 entries per server instance.
-
-Completed runs are saved in the browser's `localStorage` and restored after navigation or reload. An in-progress run cannot be resumed after leaving the page. Use **Clear** to remove saved runs from the browser.
-
-## Tests
-
-Run the deterministic regression suite with:
+Run the deterministic 60-test regression suite:
 
 ```powershell
 npm test
 ```
 
-The suite covers issue-to-plan-to-patch contracts, revision pinning, bounded revisions, patch persistence, PR-flow behavior, log redaction, provider handling, and manual-QA-only verification.
+---
 
-If the investigator cannot establish enough evidence or produce a supported, scoped edit, it refuses to publish an empty or ungrounded patch. Rate limits, private repositories, missing repositories, closed issues, unsupported files, and oversized repositories receive dedicated failure states.
+## Additional Notes
+
+* **Safety Boundary**: Codex Pilot intentionally does not execute target repository build scripts or tests inside the application container. The proposed patch should be reviewed and verified by a developer in an isolated development environment prior to merging.
+* **Token Security**: All GitHub tokens and OpenAI API keys are strictly redacted from server logs and are never persisted in the database or exposed via API endpoints.
+* **Fine-Grained PAT Compatibility**: GitHub restricts fine-grained personal access tokens from creating pull requests directly on third-party upstream repositories via API. Codex Pilot detects this condition and automatically provides a pre-filled 1-click comparison URL on GitHub.
+* **Future Roadmap**:
+  * Containerized Sandbox QA: Optional ephemeral Docker containers to run target-repository test suites (`npm test`, `pytest`, `cargo test`) against proposed patches.
+  * Interactive Plan Steering: Allow developers to review and edit implementation plans before the patch generation step begins.
+  * Multi-Issue Triaging: Batch investigation mode for repository maintainers reviewing multiple incoming issue reports simultaneously.
