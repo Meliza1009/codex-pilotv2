@@ -4,6 +4,19 @@ Codex Pilot turns a public GitHub issue into a focused, reviewable patch proposa
 
 The project produces a reviewed patch proposal. It does not execute target-repository code or claim that the patch passes the target repository's tests.
 
+![Codex Pilot - From Issue to Reviewable Patch and Pull Request](public/screenshots/01-overview-pr-fork.png)
+
+## Screenshots & Workflow Walkthrough
+
+| View | Preview | Description |
+| :--- | :--- | :--- |
+| **Investigation & Fork PR** | [![Overview](public/screenshots/01-overview-pr-fork.png)](public/screenshots/01-overview-pr-fork.png) | Paste any public issue URL, watch autonomous investigation, and push to your fork with 1-click PR opening. |
+| **Agent Activity & Unified Diff** | [![Agent Activity & Diff](public/screenshots/02-agent-activity-diff.png)](public/screenshots/02-agent-activity-diff.png) | Step-by-step agent lifecycle (exploration, planning, patch generation, review) and live unified diffs. |
+| **Requirements Contract** | [![Requirements Contract](public/screenshots/03-requirements-contract.png)](public/screenshots/03-requirements-contract.png) | Mechanical mapping ensuring every issue requirement (`mustImplement`, `preserve`, `test`) is covered. |
+| **Implementation Plan** | [![Implementation Plan](public/screenshots/04-implementation-plan.png)](public/screenshots/04-implementation-plan.png) | Multi-step implementation plan with exact file operations before code editing begins. |
+| **Pull Request on GitHub** | [![PR on GitHub](public/screenshots/05-github-pr-opened.png)](public/screenshots/05-github-pr-opened.png) | Automated feature branch pushed to fork and opened against upstream repository with full context. |
+
+
 ## Run locally
 
 ```powershell
@@ -71,7 +84,7 @@ After the review is approved and the consent checkbox is selected, the local PR 
 5. Creates the PR through the GitHub API.
 6. Removes the temporary workspace.
 
-The base branch is never pushed. If branch pushing succeeds but PR creation fails, the feature branch remains available on GitHub and can be opened manually from the fork.
+The base branch is never pushed. In fork mode, the feature branch is pushed to your GitHub fork (`forkOwner/repo`). If upstream PR creation via API is restricted by token permissions (such as fine-grained PAT scopes on external repositories), Codex Pilot displays the pushed branch and provides a direct 1-click comparison link to open the pull request on GitHub with pre-filled title and description.
 
 ## Logs and saved runs
 

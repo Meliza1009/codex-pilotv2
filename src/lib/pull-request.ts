@@ -36,6 +36,9 @@ export type PullRequestResult = {
   repo: string;
   commitSha: string | null;
   forkOwner: string | null;
+  manualPr?: boolean;
+  compareUrl?: string;
+  branchUrl?: string;
 };
 
 export type PullRequestEvent =
@@ -507,6 +510,29 @@ export async function openPullRequest(
       throw prError("pr_create_failed", "GitHub refused the PR", detail || "GitHub returned 422 for the pull request.", false);
     }
     if (created.status === 403 || created.status === 404) {
+      if (mode === "fork" && forkOwner) {
+        const compareBase = `https://github.com/${owner}/${repo}/compare/${encodeURIComponent(input.branch)}...${encodeURIComponent(forkOwner)}:${encodeURIComponent(branch)}?expand=1`;
+        const titleParam = encodeURIComponent(buildPrTitle(input.issue));
+        const bodyParam = encodeURIComponent(buildPrBody(input, commitSha));
+        const compareUrlWithPrefill = `${compareBase}&title=${titleParam}&body=${bodyParam}`;
+        const branchUrl = `https://github.com/${forkOwner}/${repo}/tree/${branch}`;
+        const result: PullRequestResult = {
+          branch,
+          baseBranch: input.branch,
+          prUrl: compareUrlWithPrefill,
+          prNumber: null,
+          owner,
+          repo,
+          commitSha,
+          forkOwner,
+          manualPr: true,
+          compareUrl: compareUrlWithPrefill,
+          branchUrl,
+        };
+        stage("pr", "Opening pull request", "complete", `Branch pushed to ${forkOwner}/${repo}. Open PR on GitHub: ${result.prUrl}`);
+        emit({ type: "completed", result });
+        return result;
+      }
       const detail = redactSecrets(JSON.stringify(created.data).slice(0, 800), secrets);
       throw prError(
         "pr_forbidden",

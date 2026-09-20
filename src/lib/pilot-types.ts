@@ -39,6 +39,12 @@ export type PullRequestState = {
   prUrl?: string;
   prNumber?: number | null;
   error?: RunError;
+  manualPr?: boolean;
+  compareUrl?: string;
+  branchUrl?: string;
+  forkOwner?: string | null;
+  owner?: string;
+  repo?: string;
 };
 export type PilotRun = {
   issueAnalysis?: import("./investigation").IssueAnalysis;

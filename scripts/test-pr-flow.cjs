@@ -333,7 +333,30 @@ function withPrEnv(vars, fn) {
     assert.equal(workspaces, 0);
     assert.equal(cloned, false);
   });
-  console.log('PASS missing repositories fail before any workspace work');
+  // 13. Fork mode handles upstream PR 403 by returning compare URL and pushed branch instead of failing.
+  await withPrEnv({ GITHUB_PR_TOKEN: 'tok', CODEX_PILOT_PR_MODE: 'fork' }, async () => {
+    const fetchImpl = mockFetch([
+      ['GET https://api.github.com/user', { status: 200, body: { login: 'merinelizabeth' } }],
+      ['GET https://api.github.com/repos/merinelizabeth/repo', { status: 200, body: { full_name: 'merinelizabeth/repo', fork: true } }],
+      ['POST https://api.github.com/repos/acme/repo/pulls', { status: 403, body: { message: 'Resource not accessible by personal access token' } }],
+    ]);
+    const git = happyGit();
+    const events = [];
+    const result = await pr.openPullRequest(baseInput(), {
+      git,
+      fetchImpl,
+      createWorkspace: async () => '/tmp/ws-fork403',
+      removeWorkspace: async () => {},
+      writePatchFile: async () => {},
+      randomSuffix: () => 'fk403',
+    }, (e) => events.push(e));
+    assert.equal(result.forkOwner, 'merinelizabeth');
+    assert.equal(result.manualPr, true);
+    assert.ok(result.compareUrl && result.compareUrl.includes('https://github.com/acme/repo/compare/main...merinelizabeth:'));
+    assert.ok(result.branchUrl && result.branchUrl.includes('https://github.com/merinelizabeth/repo/tree/'));
+    assert.ok(events.some((e) => e.type === 'completed'), 'emits completed on 403 fallback');
+  });
+  console.log('PASS fork mode handles upstream PR 403 with compare URL and branch URL');
 
   console.log('PASS pr flow is mocked end-to-end');
 })().catch((error) => { console.error(error); process.exit(1); });

@@ -671,7 +671,7 @@ export default function Home() {
   type PullRequestStreamEvent =
     | { type: "stage"; stage: { id: string; label: string; status: "active" | "complete" | "failed"; detail?: string } }
     | { type: "activity"; activity: { action: string; detail: string } }
-    | { type: "completed"; result: { branch: string; prUrl: string; prNumber: number | null } }
+    | { type: "completed"; result: { branch: string; prUrl: string; prNumber: number | null; manualPr?: boolean; compareUrl?: string; branchUrl?: string; forkOwner?: string | null; owner?: string; repo?: string } }
     | { type: "failed"; error: RunError };
 
   async function startPullRequest() {
@@ -748,9 +748,30 @@ export default function Home() {
         } else if (event.type === "completed") {
           terminal = true;
           setRun((prev) =>
-            prev ? { ...prev, pullRequest: { status: "opened", branch: event.result.branch, prUrl: event.result.prUrl, prNumber: event.result.prNumber } } : prev
+            prev
+              ? {
+                  ...prev,
+                  pullRequest: {
+                    status: "opened",
+                    branch: event.result.branch,
+                    prUrl: event.result.prUrl,
+                    prNumber: event.result.prNumber,
+                    manualPr: event.result.manualPr,
+                    compareUrl: event.result.compareUrl,
+                    branchUrl: event.result.branchUrl,
+                    forkOwner: event.result.forkOwner,
+                    owner: event.result.owner,
+                    repo: event.result.repo,
+                  },
+                }
+              : prev
           );
-          setPrProgress((prev) => [...prev, `PR opened: ${event.result.prUrl}`]);
+          setPrProgress((prev) => [
+            ...prev,
+            event.result.manualPr
+              ? `Branch pushed to ${event.result.forkOwner || "fork"}/${event.result.repo}: ${event.result.branch}`
+              : `PR opened: ${event.result.prUrl}`,
+          ]);
         } else if (event.type === "failed") {
           terminal = true;
           setPrError(event.error);
@@ -1174,7 +1195,11 @@ function PullRequestCard({
         <div className="min-w-0">
           <p className="font-mono text-[11px] font-medium uppercase tracking-[.14em] text-[#58a6ff]">Pull request</p>
           <p className="mt-1 text-sm font-medium text-white">
-            {opened ? "PR opened — review before merging" : "Turn this patch into a PR branch"}
+            {opened
+              ? run.pullRequest?.manualPr
+                ? "Branch pushed to your GitHub fork"
+                : "PR opened — review before merging"
+              : "Turn this patch into a PR branch"}
           </p>
           <p className="mt-1 text-xs leading-5 text-[#8b949e]">
             Codex Pilot clones the repo, applies the reviewed diff on a <span className="font-mono">codex-pilot/issue-N-*</span> branch,
@@ -1189,16 +1214,59 @@ function PullRequestCard({
             className="inline-flex items-center gap-1.5 rounded-md bg-[#238636] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Icon name="arrow" />
-            {creating ? "Opening PR…" : opened ? "PR opened" : "Open pull request"}
+            {creating
+              ? "Opening PR…"
+              : opened
+              ? run.pullRequest?.manualPr
+                ? "Pushed to GitHub"
+                : "PR opened"
+              : "Open pull request"}
           </button>
         </div>
       </div>
       {opened ? (
-        <div className="mt-3 rounded border border-[#238636]/40 bg-[#238636]/10 p-3 text-xs">
-          <a href={run.pullRequest!.prUrl} target="_blank" rel="noreferrer" className="font-medium text-[#aff5b4] hover:underline">
-            View pull request{run.pullRequest!.prNumber ? ` #${run.pullRequest!.prNumber}` : ""} ↗
-          </a>
-          <p className="mt-1 font-mono text-[11px] text-[#8b949e]">Branch: {run.pullRequest!.branch}</p>
+        <div className="mt-3 rounded border border-[#238636]/40 bg-[#238636]/10 p-4 text-xs">
+          {run.pullRequest?.manualPr ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#3fb950]" />
+                <span className="font-semibold text-[#aff5b4]">Branch pushed to your GitHub fork!</span>
+              </div>
+              <p className="text-[#c9d1d9] leading-relaxed">
+                The patch branch has been pushed to your GitHub repository (<span className="font-mono text-white">{run.pullRequest.forkOwner}/{run.pullRequest.repo}</span>).
+                Because GitHub fine-grained personal access tokens cannot create pull requests directly on <span className="font-mono text-white">{run.pullRequest.owner}/{run.pullRequest.repo}</span> via API, you can open the pull request with 1 click:
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <a
+                  href={run.pullRequest.compareUrl || run.pullRequest.prUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded bg-[#238636] px-3.5 py-2 font-medium text-white hover:bg-[#2ea043]"
+                >
+                  <Icon name="arrow" />
+                  Open Pull Request on GitHub ↗
+                </a>
+                {run.pullRequest.branchUrl && (
+                  <a
+                    href={run.pullRequest.branchUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-[11px] text-[#58a6ff] hover:underline"
+                  >
+                    View branch on your GitHub ↗
+                  </a>
+                )}
+              </div>
+              <p className="pt-1 font-mono text-[11px] text-[#8b949e]">Branch: {run.pullRequest.branch}</p>
+            </div>
+          ) : (
+            <div>
+              <a href={run.pullRequest!.prUrl} target="_blank" rel="noreferrer" className="font-medium text-[#aff5b4] hover:underline">
+                View pull request{run.pullRequest!.prNumber ? ` #${run.pullRequest!.prNumber}` : ""} ↗
+              </a>
+              <p className="mt-1 font-mono text-[11px] text-[#8b949e]">Branch: {run.pullRequest!.branch}</p>
+            </div>
+          )}
         </div>
       ) : (
         <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-[#8b949e]">
@@ -1217,6 +1285,14 @@ function PullRequestCard({
           <p className="font-medium text-[#ff7b72]">{prError.title}</p>
           <p className="mt-1 text-[#c9d1d9]">{prError.message}</p>
           <p className="mt-1 font-mono text-[11px] text-[#8b949e]">Code: {prError.code}</p>
+          {prError.code === "pr_forbidden" && (
+            <div className="mt-2.5 pt-2 border-t border-[#f85149]/20 text-[11px] text-[#c9d1d9]">
+              <p className="font-medium text-white">Target repository has restricted permissions</p>
+              <p className="mt-1">
+                If the branch was pushed to your fork on GitHub, you can open the pull request directly from your browser by comparing your branch to upstream.
+              </p>
+            </div>
+          )}
         </div>
       )}
       {progress.length > 0 && !opened && (
