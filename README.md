@@ -14,7 +14,11 @@ The project produces a reviewed patch proposal. It does not execute target-repos
 | **Agent Activity & Unified Diff** | [![Agent Activity & Diff](public/screenshots/02-agent-activity-diff.png)](public/screenshots/02-agent-activity-diff.png) | Step-by-step agent lifecycle (exploration, planning, patch generation, review) and live unified diffs. |
 | **Requirements Contract** | [![Requirements Contract](public/screenshots/03-requirements-contract.png)](public/screenshots/03-requirements-contract.png) | Mechanical mapping ensuring every issue requirement (`mustImplement`, `preserve`, `test`) is covered. |
 | **Implementation Plan** | [![Implementation Plan](public/screenshots/04-implementation-plan.png)](public/screenshots/04-implementation-plan.png) | Multi-step implementation plan with exact file operations before code editing begins. |
+| **Patch Explanation** | [![Patch Explanation](public/screenshots/06-patch-explanation.png)](public/screenshots/06-patch-explanation.png) | Per-file rationale and coverage analysis detailing why and how each file was changed. |
+| **Review Verdict & Feedback** | [![Review Verdict](public/screenshots/07-review-verdict.png)](public/screenshots/07-review-verdict.png) | Automated multi-check safety and requirement audit with actionable reviewer feedback. |
+| **Downloadable Diff Patch** | [![Download Patch](public/screenshots/08-download-patch.png)](public/screenshots/08-download-patch.png) | One-click patch export (`.diff`) for local offline verification, CI testing, and developer review. |
 | **Pull Request on GitHub** | [![PR on GitHub](public/screenshots/05-github-pr-opened.png)](public/screenshots/05-github-pr-opened.png) | Automated feature branch pushed to fork and opened against upstream repository with full context. |
+
 
 
 ## Run locally
