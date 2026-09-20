@@ -4,7 +4,15 @@ Codex Pilot turns a public GitHub issue into a focused, reviewable patch proposa
 
 The project produces a reviewed patch proposal. It does not execute target-repository code or claim that the patch passes the target repository's tests.
 
+[![Video Presentation](https://img.shields.io/badge/Video_Presentation-Google_Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/drive/folders/1dKBSR1pNRw1YZZmcVvqijf8pqgp2Ga-y?usp=sharing)
+
 ![Codex Pilot - From Issue to Reviewable Patch and Pull Request](public/screenshots/01-overview-pr-fork.png)
+
+## 📺 Video Presentation
+
+The complete video presentation and walkthrough demo are available on Google Drive:
+
+👉 **[Watch Codex Pilot Video Presentation](https://drive.google.com/drive/folders/1dKBSR1pNRw1YZZmcVvqijf8pqgp2Ga-y?usp=sharing)**
 
 ## Screenshots & Workflow Walkthrough
 
